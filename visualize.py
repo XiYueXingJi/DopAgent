@@ -420,7 +420,7 @@ def plot_all():
     from environment import GridWorld
     env = GridWorld(size=GRID_SIZE, max_steps=MAX_STEPS, wall_prob=WALL_PROB,
                     start_pos=START_POS, goal_pos=GOAL_POS, seed=42,
-                    action_noise=ACTION_NOISE)
+                    action_noise=ACTION_NOISE, use_onehot=False)
 
     # 图1: 学习曲线
     plot_learning_curves(bl_results, dop_results)

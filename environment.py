@@ -36,7 +36,7 @@ class GridWorld:
 
     def __init__(self, size=12, max_steps=48, wall_prob=0.15,
                  start_pos=(0, 0), goal_pos=None, seed=None,
-                 action_noise=0.15):
+                 action_noise=0.15, use_onehot=False):
         """
         初始化网格世界
 
@@ -51,7 +51,8 @@ class GridWorld:
         self.size = size
         self.max_steps = max_steps
         self.wall_prob = wall_prob
-        self.action_noise = action_noise  # 动作噪声概率（使环境随机化！）
+        self.action_noise = action_noise
+        self.use_onehot = use_onehot  # True=独热编码, False=归一化坐标
         self.start_pos = start_pos
         self.goal_pos = goal_pos if goal_pos else (size - 1, size - 1)
         self.agent_pos = start_pos
@@ -156,11 +157,26 @@ class GridWorld:
         return self._get_state(), reward, done, {"hit_wall": hit_wall}
 
     def _get_state(self):
-        """返回归一化的状态表示 [x/size, y/size]"""
-        return np.array([
-            self.agent_pos[0] / self.size,
-            self.agent_pos[1] / self.size,
-        ], dtype=np.float32)
+        """
+        返回状态表示
+
+        one-hot 编码: 每个格子是独立的 64/100 维向量
+        → 前向模型无法跨位置泛化 "向右=x+1"
+        → 未访问位置预测误差高 → 内在奖赏真正引导探索！
+
+        归一化坐标: 2 维向量 → 前向模型几轮就学会所有转移
+        → 内在奖赏归零 → 无探索驱动
+        """
+        if self.use_onehot:
+            idx = self.agent_pos[0] * self.size + self.agent_pos[1]
+            state = np.zeros(self.size * self.size, dtype=np.float32)
+            state[idx] = 1.0
+            return state
+        else:
+            return np.array([
+                self.agent_pos[0] / self.size,
+                self.agent_pos[1] / self.size,
+            ], dtype=np.float32)
 
     def render(self, ax=None, title="Grid World", show_agent=True):
         """
@@ -219,7 +235,7 @@ class GridWorld:
         return self.visit_count.copy()
 
     def get_state_dim(self):
-        return 2
+        return self.size * self.size if self.use_onehot else 2
 
     def get_action_dim(self):
         return 4
