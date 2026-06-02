@@ -23,9 +23,10 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # ==================== 环境配置 ====================
-GRID_SIZE = 12               # 迷宫大小 (12x12)
-MAX_STEPS = GRID_SIZE * 4    # 每轮最大步数
-WALL_PROB = 0.15             # 随机生成墙壁的概率
+GRID_SIZE = 10               # 迷宫大小 (10x10，甜点尺寸)
+MAX_STEPS = GRID_SIZE * 3    # 每轮最大步数（更紧凑）
+WALL_PROB = 0.12             # 随机生成墙壁的概率
+ACTION_NOISE = 0.15          # 动作噪声: 15%概率动作被随机替换（关键！使环境随机化）
 START_POS = (0, 0)           # 起点坐标
 GOAL_POS = (GRID_SIZE - 1, GRID_SIZE - 1)  # 终点坐标
 
@@ -44,11 +45,11 @@ MIN_MEMORY = 500             # 开始训练的最小经验数
 
 # Epsilon-greedy 探索策略
 EPSILON_START = 1.0          # 初始探索率
-EPSILON_END = 0.05           # 最终探索率
-EPSILON_DECAY = 0.995        # 每轮衰减系数
+EPSILON_END = 0.02           # 最终探索率（极低=几乎不探索）
+EPSILON_DECAY = 0.985        # 快速衰减≈260轮后停止探索
 
 # ==================== 多巴胺模块超参数 ====================
-BETA = 0.5                   # 内在奖赏系数（好奇心权重）
+BETA = 1.0                   # 内在奖赏系数
 FORWARD_LR = 1e-3            # 前向预测网络学习率
 FORWARD_HIDDEN = [128, 64]   # 前向网络隐藏层
 

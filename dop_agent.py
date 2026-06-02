@@ -128,29 +128,44 @@ class DopAgent:
         total_reward = ext_reward + self.beta * r_int
 
         # ==========================================
-        # Step 3: 用融合后的奖赏存入经验池
-        # （注意：这里存的是 total_reward，不是 ext_reward！）
+        # Step 3: 存入经验池 — ⚠️ 只存外部奖赏！
+        # 内在奖赏在训练时动态重算（因为前向模型在不断学习）
         # ==========================================
-        self.memory.push(state, action, total_reward, next_state, done)
+        self.memory.push(state, action, ext_reward, next_state, done)
 
         # 经验不够，不训练
         if len(self.memory) < self.batch_size:
             return None, {'r_int': r_int, 'r_total': total_reward}
 
         # ==========================================
-        # Step 4: 标准 DQN 更新（用 total_reward 计算TD目标）
+        # Step 4: DQN 更新 —— 关键修复！
+        # 从经验池采样后，用当前前向模型重新计算内在奖赏
         # ==========================================
-        states, actions, rewards, next_states, dones = self.memory.sample(
+        states, actions, ext_rewards, next_states, dones = self.memory.sample(
             self.batch_size)
         states = states.to(self.device)
         actions = actions.to(self.device)
-        rewards = rewards.to(self.device)
+        ext_rewards = ext_rewards.to(self.device)
         next_states = next_states.to(self.device)
         dones = dones.to(self.device)
 
+        # ✨ 用当前最新的前向模型重算内在奖赏！
+        # 这才是正确的：前向模型 → 内在奖赏 → 驱动探索
+        intrinsic_rewards = []
+        for i in range(self.batch_size):
+            s_i = states[i].cpu().numpy()
+            a_i = actions[i].item()
+            ns_i = next_states[i].cpu().numpy()
+            r_int_i = self.dopamine.compute_intrinsic_reward(s_i, a_i, ns_i)
+            intrinsic_rewards.append(r_int_i)
+        intrinsic_rewards = torch.FloatTensor(intrinsic_rewards).to(self.device)
+
+        # 总奖赏 = 外部 + β × 内在（用最新的前向模型计算！）
+        total_rewards = ext_rewards + self.beta * intrinsic_rewards
+
         with torch.no_grad():
             next_q = self.target_network(next_states).max(dim=1)[0]
-            targets = rewards + self.gamma * next_q * (1 - dones)
+            targets = total_rewards + self.gamma * next_q * (1 - dones)
 
         current_q = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze()
         loss = torch.nn.functional.mse_loss(current_q, targets)

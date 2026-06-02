@@ -419,7 +419,8 @@ def plot_all():
     # 获取墙壁信息（从environment重建）
     from environment import GridWorld
     env = GridWorld(size=GRID_SIZE, max_steps=MAX_STEPS, wall_prob=WALL_PROB,
-                    start_pos=START_POS, goal_pos=GOAL_POS, seed=42)
+                    start_pos=START_POS, goal_pos=GOAL_POS, seed=42,
+                    action_noise=ACTION_NOISE)
 
     # 图1: 学习曲线
     plot_learning_curves(bl_results, dop_results)

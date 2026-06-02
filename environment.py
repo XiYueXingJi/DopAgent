@@ -35,7 +35,8 @@ class GridWorld:
     """
 
     def __init__(self, size=12, max_steps=48, wall_prob=0.15,
-                 start_pos=(0, 0), goal_pos=None, seed=None):
+                 start_pos=(0, 0), goal_pos=None, seed=None,
+                 action_noise=0.15):
         """
         初始化网格世界
 
@@ -50,6 +51,7 @@ class GridWorld:
         self.size = size
         self.max_steps = max_steps
         self.wall_prob = wall_prob
+        self.action_noise = action_noise  # 动作噪声概率（使环境随机化！）
         self.start_pos = start_pos
         self.goal_pos = goal_pos if goal_pos else (size - 1, size - 1)
         self.agent_pos = start_pos
@@ -111,7 +113,17 @@ class GridWorld:
             info: 额外信息字典
         """
         self.steps += 1
-        dx, dy = self.action_map[action]
+
+        # === 动作噪声：使环境随机化，前向模型无法完美预测 ===
+        # 这对DopAgent至关重要！
+        # 如果环境完全确定性，"向右走→x+1"可以100%预测
+        # 内在奖赏瞬间归零，好奇心消失。
+        # 加上噪声后，相同动作可能产生不同结果→预测误差持续存在→好奇持久！
+        actual_action = action
+        if self.rng.random() < self.action_noise:
+            actual_action = self.rng.randint(0, 3)
+
+        dx, dy = self.action_map[actual_action]
         new_x = self.agent_pos[0] + dx
         new_y = self.agent_pos[1] + dy
 

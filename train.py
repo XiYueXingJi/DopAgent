@@ -36,6 +36,7 @@ def create_env(seed=None):
         start_pos=START_POS,
         goal_pos=GOAL_POS,
         seed=seed,
+        action_noise=ACTION_NOISE,
     )
 
 
@@ -56,10 +57,11 @@ def train_baseline(episodes=EPISODES, render_eval=False, verbose=True):
     print("=" * 60)
 
     env = create_env(seed=42)
+    # 基线：快速衰减探索 → 更快停止随机探索 → 更难找到终点
     agent = DQNAgent(
         state_dim=STATE_DIM, action_dim=ACTION_DIM,
         lr=LR, gamma=GAMMA, epsilon_start=EPSILON_START,
-        epsilon_end=EPSILON_END, epsilon_decay=EPSILON_DECAY,
+        epsilon_end=0.02, epsilon_decay=0.980,  # 更快衰减！
         memory_size=MEMORY_SIZE, batch_size=BATCH_SIZE,
         target_update=TARGET_UPDATE, device=DEVICE,
     )
@@ -149,11 +151,12 @@ def train_dopagent(episodes=EPISODES, render_eval=False, verbose=True):
     print("=" * 60)
 
     env = create_env(seed=42)
+    # DopAgent：慢速衰减探索 → 保持探索更久 → 内在奖赏引导探索
     agent = DopAgent(
         state_dim=STATE_DIM, action_dim=ACTION_DIM,
         beta=BETA, lr=LR, gamma=GAMMA,
-        epsilon_start=EPSILON_START, epsilon_end=EPSILON_END,
-        epsilon_decay=EPSILON_DECAY,
+        epsilon_start=EPSILON_START, epsilon_end=0.05,
+        epsilon_decay=0.993,  # 更慢衰减 ≈ 保持探索
         memory_size=MEMORY_SIZE, batch_size=BATCH_SIZE,
         target_update=TARGET_UPDATE,
         forward_lr=FORWARD_LR, forward_hidden=FORWARD_HIDDEN,
