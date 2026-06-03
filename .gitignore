@@ -5,7 +5,10 @@ __pycache__/
 
 # Models and data (large files)
 models/
-results/
+models_*/
+*.pth
+results/*.pt
+results_*/
 
 # IDE
 .vscode/
@@ -13,6 +16,9 @@ results/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# SSH keys
+.ssh/
 
 # Virtual environment
 venv/
